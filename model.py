@@ -1,5 +1,6 @@
 import torch.nn as nn
 
+# Denoising Convolutional Neural Network from DnCNN paper
 class DnCNN(nn.Module):
     def __init__(self, channels, num_of_layers=17, kernel_size=3, padding=1, features=64):
         super(DnCNN, self).__init__()
