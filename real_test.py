@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from model import DnCNN
-from train import test_PSNR
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -15,6 +14,7 @@ model.load_state_dict(torch.load('model.pth'))
 model.to(device)
 model.eval()
 
+
 PATH = 'data/real_world_test'
 files = os.listdir(PATH)
 
@@ -25,30 +25,27 @@ sigma = 25
 e = sigma/255
 
 # load and test noisy test images
-psnr_tot = 0
 for file in files:
     print(f'Testing {file}')
 
-    # prepate clean data
+    # load data
     data = os.path.join(PATH, file)
-    clean = plt.imread(data)
-    if len(clean.shape) > 2:
+    noise = plt.imread(data)
+
+    # convert to greyscale if not
+    if len(noise.shape) > 2:
         from PIL import Image
         img = Image.open(data).convert('L')
         os.remove(data)
         img.save(data)
-        clean = plt.imread(data)
-    if clean[0, 0] > 1:
-        clean = clean / 255
-    clean = np.reshape(clean, (1, 1, clean.shape[0], clean.shape[1]))
-    clean = torch.Tensor(clean).to(device)
+        noise = plt.imread(data)
+    
+    if noise[0, 0] > 1:
+        noise = noise / 255
 
-
-    # Add noise
-    noise = torch.FloatTensor(clean.size()).normal_(0, sigma/255).to(device)
-    noise = clean + noise
-    plt.imsave(f'data/real_world_output_noise/{file}', noise.cpu().data.numpy()[0, 0], cmap='gray')
-
+    # reformat data
+    noise = np.reshape(noise, (1, 1, noise.shape[0], noise.shape[1]))
+    noise = torch.Tensor(noise).to(device)
     out = None
 
     # Monte Carlo approximation
@@ -64,15 +61,8 @@ for file in files:
     
     # normalize output
     out = torch.clamp(out/T, 0, 1)
-    plt.imsave(f'data/real_world_output/{file}', out.cpu().data.numpy()[0, 0], cmap='gray')
-
-    # calculate
-    psnr = test_PSNR(out.data.numpy(), clean.data.numpy())
-    psnr_tot += psnr
-
-    print(f'{file} PSNR: {psnr}')
-
-print(f"\nAverage PSNR: {psnr_tot / len(files)}")
+    out = out.cpu()
+    plt.imsave(f'data/real_world_output_no_added_noise/{file}', out.data.numpy()[0, 0], cmap='gray')
 
 print('End of testing')
                 
